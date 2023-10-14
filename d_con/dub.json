@@ -8,8 +8,6 @@
 	"license": "MIT",
 	"name": "related_concurrent",
 	"dependencies": {
-		"lookuptable": "~>0.1.4",
-		"newaa": "~>0.0.1",
 		"asdf": "~>0.7.17"
 	},
     "buildTypes": {
