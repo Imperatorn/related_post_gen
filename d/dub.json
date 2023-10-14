@@ -1,8 +1,7 @@
 {
 	"authors": [
 		"Johan Forsberg",
-		"Sergei Giniatulin",
-		"Steven Schveighoffer"
+		"Sergei Giniatulin"
 	],
 	"copyright": "Copyright © 2023",
 	"dependencies": {
