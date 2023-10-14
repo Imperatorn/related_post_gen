@@ -34,17 +34,14 @@ void main()
 	auto relatedPosts = new RelatedPosts[postsCount];
 	auto taggedPostsCount = new ubyte[postsCount];
 	Post[TopN] topPosts;
-	
+
 	ulong[][string] tagMap;
 
 	auto sw = StopWatch(AutoStart.yes);
 
 	foreach (i, post; posts)
 		foreach (tag; post.tags)
-			if (auto arr = tag in tagMap)
-				(*arr) ~= i;
-			else
-				tagMap[tag] = [i];
+			tagMap[tag] ~= i;
 
 	foreach (k, post; posts)
 	{
