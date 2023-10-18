@@ -1,8 +1,12 @@
 import std.stdio : writeln, toFile;
 import std.datetime.stopwatch : StopWatch, AutoStart;
-import asdf.serialization : deserialize, serializeToJson;
+import std.json;
+import std.conv;
+import core.simd : Vector;
+import asdf.serialization;
+import ldc.simd;
+import std.algorithm : max;
 import std.file : readText;
-import std.algorithm, std.array;
 
 enum TopN = 5;
 
@@ -26,27 +30,32 @@ struct PostsWithSharedTags
 	ubyte sharedTags;
 }
 
-Post[TopN] topPosts;
-PostsWithSharedTags[TopN] top5;
+enum vSize = 16;
+alias hashmap = size_t[][string];
+alias vec_u = Vector!(ubyte[vSize]);
 
 void main()
 {
 	auto jsonText = readText("../posts.json");
 	auto posts = deserialize!(Post[])(jsonText);
-	int postsCount = cast(int) posts.length;
-	auto relatedPosts = new RelatedPosts[postsCount];
-	auto taggedPostsCount = new ubyte[postsCount];
-	
-	ulong[][string] tagMap;
 
 	auto sw = StopWatch(AutoStart.yes);
 
+	int postsCount = cast(int) posts.length;
+	auto relatedPosts = new RelatedPosts[postsCount];
+
+	Post[TopN] topPosts;
+
+	ulong[][string] tagMap;
 	foreach (i, post; posts)
 		foreach (tag; post.tags)
-			if (auto arr = tag in tagMap)
-				(*arr) ~= i;
-			else
-				tagMap[tag] = [i];
+			tagMap[tag] ~= i;
+
+	auto nVectors = (postsCount + vSize - 1) / vSize;
+	auto taggedPostsVec = new vec_u[nVectors];
+	auto taggedPostsCount = cast(ubyte[]) taggedPostsVec;
+
+	PostsWithSharedTags[TopN] top5;
 
 	foreach (k, post; posts)
 	{
@@ -58,23 +67,41 @@ void main()
 
 		taggedPostsCount[k] = 0;
 
-		auto minTags = 0;
-		foreach (j, count; taggedPostsCount)
+		top5[] = PostsWithSharedTags(0, 0);
+
+		vec_u minTags = 0;
+		ulong pv = 0;
+
+		vec_u eqMask = cast(ubyte)-1;
+
+		while (pv < nVectors)
 		{
-			if (count > minTags)
+			while (pv < nVectors && ((taggedPostsVec[pv] <= minTags) is eqMask))
+				pv++;
+
+			if (pv < nVectors)
 			{
-				int upperBound = TopN - 2;
+				vec_u counts = taggedPostsVec[pv];
 
-				while (upperBound >= 0 && count > top5[upperBound].sharedTags)
+				foreach (l; 0 .. vSize)
 				{
-					top5[upperBound + 1] = top5[upperBound];
-					upperBound--;
+					if (counts[l] > minTags[0])
+					{
+						int upperBound = TopN - 2;
+
+						while (upperBound >= 0 && counts[l] > top5[upperBound].sharedTags)
+						{
+							top5[upperBound + 1] = top5[upperBound];
+							upperBound--;
+						}
+
+						top5[upperBound + 1] = PostsWithSharedTags(pv * vSize + l, counts[l]);
+
+						minTags = cast(vec_u) top5[TopN - 1].sharedTags;
+					}
 				}
-
-				top5[upperBound + 1] = PostsWithSharedTags(j, count);
-
-				minTags = top5[TopN - 1].sharedTags;
 			}
+			pv++;
 		}
 
 		foreach (i, t; top5)

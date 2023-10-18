@@ -4,9 +4,6 @@
 		"Sergei Giniatulin"
 	],
 	"copyright": "Copyright © 2023",
-	"dependencies": {
-		"asdf": "0.7.17"
-	},
 	"buildTypes": {
 		"release": {
 			"buildOptions": [
@@ -17,5 +14,8 @@
 	},
 	"description": "A sequential D application.",
 	"license": "MIT",
-	"name": "related"
+	"name": "related",
+	"dependencies": {
+		"asdf": "~>0.7.17"
+	}
 }
